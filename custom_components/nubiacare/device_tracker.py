@@ -82,6 +82,7 @@ class NubiaCareTracker(TrackerEntity):
         self._coordinator = coordinator
         self._device_id = device_id
         self._initial_device = device
+        self._attr_extra_state_attributes: dict[str, str] = {}
         self._attr_unique_id = device_id
         self._attr_available = coordinator.last_update_success
         self._update_location()
@@ -89,11 +90,15 @@ class NubiaCareTracker(TrackerEntity):
     def _update_location(self) -> None:
         """Update cached tracker coordinates from the latest API data."""
         location = self._device.location if self._device is not None else None
+        self._attr_extra_state_attributes.clear()
         if location is None:
             self._attr_latitude = None
             self._attr_longitude = None
             self._attr_location_accuracy = 0
             return
+        self._attr_extra_state_attributes["location_query_type"] = (
+            location.location_query_type
+        )
         latitude = _coordinate(location.latitude, -90, 90)
         longitude = _coordinate(location.longitude, -180, 180)
         self._attr_latitude = latitude[0] if latitude is not None else None
