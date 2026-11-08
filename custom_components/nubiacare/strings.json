@@ -22,7 +22,7 @@
       "message": "The selected device is not a Nubia Care watch."
     },
     "request_location_failed": {
-      "message": "Unable to request a location from Nubia Care."
+      "message": "Unable to request a location from Nubia Care: {reason}"
     }
   },
   "entity": {

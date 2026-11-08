@@ -36,6 +36,12 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant, ServiceCall
     from homeassistant.helpers.typing import ConfigType
 
+_LOGGER = logging.getLogger(__name__)
+
+_API_ERROR_TRANSLATIONS = {
+    "设备离线": "Device is offline",
+}
+
 PLATFORMS: list[Platform] = [Platform.DEVICE_TRACKER, Platform.SENSOR]
 UPDATE_INTERVAL = timedelta(minutes=10)
 LOCATION_REQUEST_DELAY = 10
@@ -83,9 +89,12 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
                 runtime_data.session, device_id
             )
         except NubiaError as err:
+            _LOGGER.exception("Nubia Care location request failed")
+            reason = _API_ERROR_TRANSLATIONS.get(str(err), str(err))
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="request_location_failed",
+                translation_placeholders={"reason": reason},
             ) from err
         await asyncio.sleep(LOCATION_REQUEST_DELAY)
         await runtime_data.coordinator.async_request_refresh()
@@ -137,7 +146,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
     coordinator = DataUpdateCoordinator(
         hass,
         config_entry=entry,
-        logger=logging.getLogger(__name__),
+        logger=_LOGGER,
         name=DOMAIN,
         update_interval=UPDATE_INTERVAL,
         update_method=async_update_devices,
