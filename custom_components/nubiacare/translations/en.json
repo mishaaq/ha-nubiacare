@@ -18,6 +18,14 @@
       "already_configured": "This Nubia Care account is already configured."
     }
   },
+  "exceptions": {
+    "device_not_supported": {
+      "message": "The selected device is not a Nubia Care watch."
+    },
+    "request_location_failed": {
+      "message": "Unable to request a location from Nubia Care."
+    }
+  },
   "entity": {
     "device_tracker": {
       "location": {

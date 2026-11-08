@@ -29,6 +29,13 @@ numeric floats. Credentials are stored in the config entry;
 authentication tokens are kept in memory and renewed when Home Assistant
 starts.
 
+## Actions
+
+Use the **Nubia Care: Refresh location** action in an automation or script
+to ask a watch to report its current location. Select the watch as the device
+target. The integration waits about 10 seconds after the request, then refreshes
+its device data.
+
 ## Removal
 
 Remove the integration from **Settings → Devices & services**. Home Assistant

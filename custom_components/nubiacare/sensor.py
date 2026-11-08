@@ -34,7 +34,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up a battery sensor for every device with a valid ID."""
-    coordinator = entry.runtime_data
+    coordinator = entry.runtime_data.coordinator
     sensors = [
         NubiaCareBatterySensor(coordinator, device, device_id)
         for device in coordinator.data

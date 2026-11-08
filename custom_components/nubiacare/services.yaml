@@ -1,0 +1,11 @@
+refresh_location:
+  name: Refresh location
+  description: Ask the selected Nubia Care watch to report its latest location.
+  fields:
+    device_id:
+      name: Device
+      description: Nubia Care watch to request a location from.
+      required: true
+      selector:
+        device:
+          integration: nubiacare

@@ -28,7 +28,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up a tracker for every device in the Nubia Care account."""
-    coordinator = entry.runtime_data
+    coordinator = entry.runtime_data.coordinator
     added_device_ids: set[str] = set()
     entities: dict[str, NubiaCareTracker] = {}
 

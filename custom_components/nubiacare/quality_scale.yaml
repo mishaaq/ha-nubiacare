@@ -1,13 +1,13 @@
 rules:
   # Bronze
-  action-setup: todo
+  action-setup: done
   appropriate-polling: done
   brands: done
   common-modules: done
   config-flow-test-coverage: todo
   config-flow: done
   dependency-transparency: done
-  docs-actions: todo
+  docs-actions: done
   docs-conditions: todo
   docs-high-level-description: done
   docs-installation-instructions: done
