@@ -1,7 +1,6 @@
 {
   "domain": "nubiacare",
   "name": "Nubia Care",
-  "version": "0.1.0",
   "codeowners": [
     "@mishaaq"
   ],
@@ -14,5 +13,6 @@
   "quality_scale": "bronze",
   "requirements": [
     "libnubiacare-py==0.1.0"
-  ]
+  ],
+  "version": "0.1.0"
 }
