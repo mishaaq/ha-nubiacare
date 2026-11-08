@@ -1,0 +1,18 @@
+{
+  "domain": "nubiacare",
+  "name": "Nubia Care",
+  "version": "0.1.0",
+  "codeowners": [
+    "@mishaaq"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/mishaaq/ha-nubiacare",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/mishaaq/ha-nubiacare/issues",
+  "quality_scale": "bronze",
+  "requirements": [
+    "libnubiacare-py==0.1.0"
+  ]
+}
