@@ -11,6 +11,7 @@ from .const import DOMAIN
 
 if TYPE_CHECKING:
     from nubia_care import NubiaDevice as NubiaDeviceInfo
+    from nubia_care import NubiaFirmware
 
 _DEFAULT_MANUFACTURER = "Nubia"
 _MODEL_MANUFACTURER_PREFIXES = ("ZTE ",)
@@ -23,6 +24,7 @@ class NubiaCareDevice:
     device_id: str
     device_info: NubiaDeviceInfo
     model_name: str | None = None
+    firmware: NubiaFirmware | None = None
 
 
 def create_device_info(device_id: str, device: NubiaCareDevice) -> DeviceInfo:
@@ -44,4 +46,7 @@ def create_device_info(device_id: str, device: NubiaCareDevice) -> DeviceInfo:
         manufacturer=manufacturer,
         model=model,
         name=device_info.name or device_info.id,
+        sw_version=(
+            device.firmware.device_firmware if device.firmware is not None else None
+        ),
     )

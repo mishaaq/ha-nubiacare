@@ -27,6 +27,7 @@ from nubia_care import (
     NubiaAuthenticationError,
     NubiaDeviceState,
     NubiaError,
+    NubiaFirmware,
     NubiaSession,
 )
 
@@ -138,6 +139,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
     }
     device_ids = list(device_infos)
 
+    async def async_get_firmware(device_id: str) -> NubiaFirmware | None:
+        """Fetch installed firmware for device registry metadata."""
+        try:
+            return await api.async_get_device_firmware(session, device_id)
+        except NubiaError as err:
+            _LOGGER.warning(
+                "Unable to fetch Nubia Care firmware version for device %s: %s",
+                device_id,
+                err,
+            )
+            return None
+
     async def async_update_devices() -> list[NubiaDeviceState]:
         """Fetch current state for the configured account devices."""
         try:
@@ -162,6 +175,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
         for device_state in coordinator.data
         if device_state.id is not None
     }
+    firmware_by_device_id = dict(
+        zip(
+            device_ids,
+            await asyncio.gather(
+                *(async_get_firmware(device_id) for device_id in device_ids)
+            ),
+            strict=True,
+        )
+    )
     devices: list[NubiaCareDevice] = []
     for device_id, device_info in device_infos.items():
         device_state = device_states.get(device_id)
@@ -172,6 +194,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
                 model_name=(
                     device_state.model_name if device_state is not None else None
                 ),
+                firmware=firmware_by_device_id[device_id],
             )
         )
     entry.runtime_data = NubiaCareRuntimeData(
