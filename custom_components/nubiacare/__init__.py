@@ -25,12 +25,13 @@ from nubia_care import (
     NubiaAPI,
     NubiaAuth,
     NubiaAuthenticationError,
-    NubiaDevice,
+    NubiaDeviceState,
     NubiaError,
     NubiaSession,
 )
 
 from .const import DOMAIN
+from .entity import NubiaCareDevice
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant, ServiceCall
@@ -53,7 +54,8 @@ class NubiaCareRuntimeData:
 
     api: NubiaAPI
     session: NubiaSession
-    coordinator: DataUpdateCoordinator[list[NubiaDevice]]
+    devices: list[NubiaCareDevice]
+    coordinator: DataUpdateCoordinator[list[NubiaDeviceState]]
 
 
 type NubiaCareConfigEntry = ConfigEntry[NubiaCareRuntimeData]
@@ -125,16 +127,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
     api = NubiaAPI(auth)
 
     try:
-        devices = await api.async_get_devices(session)
+        fetched_devices = await api.async_get_devices(session)
     except NubiaError as err:
         message = f"Unable to fetch Nubia Care devices: {err}"
         raise ConfigEntryNotReady(message) from err
-    device_ids = [
-        device_id for device in devices if (device_id := device.id) is not None
-    ]
+    device_infos = {
+        device_id: device
+        for device in fetched_devices
+        if (device_id := device.id) is not None
+    }
+    device_ids = list(device_infos)
 
-    async def async_update_devices() -> list[NubiaDevice]:
-        """Fetch current details for the configured account devices."""
+    async def async_update_devices() -> list[NubiaDeviceState]:
+        """Fetch current state for the configured account devices."""
         try:
             return await asyncio.gather(
                 *(api.async_get_device(session, device_id) for device_id in device_ids)
@@ -152,9 +157,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
         update_method=async_update_devices,
     )
     await coordinator.async_config_entry_first_refresh()
+    device_states = {
+        device_state.id: device_state
+        for device_state in coordinator.data
+        if device_state.id is not None
+    }
+    devices: list[NubiaCareDevice] = []
+    for device_id, device_info in device_infos.items():
+        device_state = device_states.get(device_id)
+        devices.append(
+            NubiaCareDevice(
+                device_id=device_id,
+                device_info=device_info,
+                model_name=(
+                    device_state.model_name if device_state is not None else None
+                ),
+            )
+        )
     entry.runtime_data = NubiaCareRuntimeData(
         api=api,
         session=session,
+        devices=devices,
         coordinator=coordinator,
     )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

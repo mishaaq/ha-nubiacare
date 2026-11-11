@@ -13,7 +13,7 @@ from homeassistant.components.sensor import (
 from homeassistant.const import PERCENTAGE
 from homeassistant.core import callback
 
-from .entity import create_device_info
+from .entity import NubiaCareDevice, create_device_info
 
 if TYPE_CHECKING:
     from datetime import date, datetime
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from homeassistant.helpers.device_registry import DeviceInfo
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
     from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-    from nubia_care import NubiaDevice
+    from nubia_care import NubiaDeviceState
 
     from . import NubiaCareConfigEntry
 
@@ -36,9 +36,8 @@ async def async_setup_entry(
     """Set up a battery sensor for every device with a valid ID."""
     coordinator = entry.runtime_data.coordinator
     sensors = [
-        NubiaCareBatterySensor(coordinator, device, device_id)
-        for device in coordinator.data
-        if (device_id := device.id) is not None
+        NubiaCareBatterySensor(coordinator, device, device.device_id)
+        for device in entry.runtime_data.devices
     ]
 
     @callback
@@ -63,8 +62,8 @@ class NubiaCareBatterySensor(SensorEntity):
 
     def __init__(
         self,
-        coordinator: DataUpdateCoordinator[list[NubiaDevice]],
-        device: NubiaDevice,
+        coordinator: DataUpdateCoordinator[list[NubiaDeviceState]],
+        device: NubiaCareDevice,
         device_id: str,
     ) -> None:
         """Initialize the battery sensor."""
@@ -83,21 +82,20 @@ class NubiaCareBatterySensor(SensorEntity):
 
     def _update_battery(self) -> None:
         """Update cached battery state and availability."""
-        device = self._device
-        self._attr_native_value = device.battery_level if device is not None else None
+        status = self._status
+        self._attr_native_value = status.battery_level if status is not None else None
         self._attr_available = (
-            self._coordinator.last_update_success and device is not None
+            self._coordinator.last_update_success and status is not None
         )
 
     @cached_property
     def device_info(self) -> DeviceInfo:
         """Associate this sensor with its Nubia Care watch."""
-        device = self._device or self._initial_device
-        return create_device_info(device, self._device_id)
+        return create_device_info(self._device_id, self._initial_device)
 
     @property
-    def _device(self) -> NubiaDevice | None:
-        """Return the latest coordinator data for this device."""
+    def _status(self) -> NubiaDeviceState | None:
+        """Return the latest state for this device."""
         return next(
             (
                 device

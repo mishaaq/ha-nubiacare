@@ -21,7 +21,7 @@ Care account. The integration checks the credentials and retrieves the account
 devices before completing setup.
 
 On setup or reload, the integration retrieves the account's current device
-list. It then polls each listed device's details every ten minutes. Newly
+list. It then polls each listed device's current state every ten minutes. Newly
 associated devices are discovered after the integration is reloaded. Devices
 without a reported location remain available but have no map coordinates until
 the service provides a location. Home Assistant's standard GPS attributes are

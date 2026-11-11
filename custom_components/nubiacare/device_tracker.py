@@ -10,14 +10,14 @@ from homeassistant.components.device_tracker.const import SourceType
 from homeassistant.components.device_tracker.entity import TrackerEntity
 from homeassistant.core import callback
 
-from .entity import create_device_info
+from .entity import NubiaCareDevice, create_device_info
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.device_registry import DeviceInfo
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
     from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-    from nubia_care import NubiaDevice
+    from nubia_care import NubiaDeviceState
 
     from . import NubiaCareConfigEntry
 
@@ -29,39 +29,19 @@ async def async_setup_entry(
 ) -> None:
     """Set up a tracker for every device in the Nubia Care account."""
     coordinator = entry.runtime_data.coordinator
-    added_device_ids: set[str] = set()
-    entities: dict[str, NubiaCareTracker] = {}
+    trackers = [
+        NubiaCareTracker(coordinator, device, device.device_id)
+        for device in entry.runtime_data.devices
+    ]
 
     @callback
-    def add_new_devices() -> None:
-        devices = [
-            (device, device_id)
-            for device in coordinator.data
-            if (device_id := device.id) is not None
-            and device_id not in added_device_ids
-        ]
-        if devices:
-            added_device_ids.update(device_id for _, device_id in devices)
-            new_entities = [
-                NubiaCareTracker(coordinator, device, device_id)
-                for device, device_id in devices
-            ]
-            entities.update(
-                {
-                    device_id: entity
-                    for (_, device_id), entity in zip(
-                        devices, new_entities, strict=True
-                    )
-                }
-            )
-            async_add_entities(new_entities)
-        new_device_ids = {device_id for _, device_id in devices}
-        for device_id, entity in entities.items():
-            if device_id not in new_device_ids:
-                entity.update_from_coordinator()
+    def update_trackers() -> None:
+        """Refresh tracker state after coordinator updates."""
+        for tracker in trackers:
+            tracker.update_from_coordinator()
 
-    entry.async_on_unload(coordinator.async_add_listener(add_new_devices))
-    add_new_devices()
+    entry.async_on_unload(coordinator.async_add_listener(update_trackers))
+    async_add_entities(trackers)
 
 
 class NubiaCareTracker(TrackerEntity):
@@ -73,8 +53,8 @@ class NubiaCareTracker(TrackerEntity):
 
     def __init__(
         self,
-        coordinator: DataUpdateCoordinator[list[NubiaDevice]],
-        device: NubiaDevice,
+        coordinator: DataUpdateCoordinator[list[NubiaDeviceState]],
+        device: NubiaCareDevice,
         device_id: str,
     ) -> None:
         """Initialize the tracker."""
@@ -89,7 +69,8 @@ class NubiaCareTracker(TrackerEntity):
 
     def _update_location(self) -> None:
         """Update cached tracker coordinates from the latest API data."""
-        location = self._device.location if self._device is not None else None
+        status = self._status
+        location = status.location if status is not None else None
         self._attr_extra_state_attributes.clear()
         if location is None:
             self._attr_latitude = None
@@ -111,19 +92,18 @@ class NubiaCareTracker(TrackerEntity):
         """Update coordinates when the coordinator fetches new device data."""
         self._update_location()
         self._attr_available = (
-            self._coordinator.last_update_success and self._device is not None
+            self._coordinator.last_update_success and self._status is not None
         )
         self.async_write_ha_state()
 
     @cached_property
     def device_info(self) -> DeviceInfo:
         """Return the Nubia Care watch represented by this tracker."""
-        device = self._device or self._initial_device
-        return create_device_info(device, self._device_id)
+        return create_device_info(self._device_id, self._initial_device)
 
     @property
-    def _device(self) -> NubiaDevice | None:
-        """Return the latest coordinator data for this device."""
+    def _status(self) -> NubiaDeviceState | None:
+        """Return the latest state for this device."""
         return next(
             (
                 device
