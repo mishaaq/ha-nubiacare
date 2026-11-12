@@ -44,8 +44,13 @@ _API_ERROR_TRANSLATIONS = {
     "设备离线": "Device is offline",
 }
 
-PLATFORMS: list[Platform] = [Platform.DEVICE_TRACKER, Platform.SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.DEVICE_TRACKER,
+    Platform.SENSOR,
+    Platform.UPDATE,
+]
 UPDATE_INTERVAL = timedelta(minutes=10)
+FIRMWARE_UPDATE_INTERVAL = timedelta(hours=12)
 LOCATION_REQUEST_DELAY = 10
 
 
@@ -57,6 +62,7 @@ class NubiaCareRuntimeData:
     session: NubiaSession
     devices: list[NubiaCareDevice]
     coordinator: DataUpdateCoordinator[list[NubiaDeviceState]]
+    firmware_coordinator: DataUpdateCoordinator[dict[str, NubiaFirmware | None]]
 
 
 type NubiaCareConfigEntry = ConfigEntry[NubiaCareRuntimeData]
@@ -151,6 +157,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
             )
             return None
 
+    async def async_update_firmware() -> dict[str, NubiaFirmware | None]:
+        """Fetch firmware versions for all configured devices."""
+        firmware = await asyncio.gather(
+            *(async_get_firmware(device_id) for device_id in device_ids)
+        )
+        return dict(zip(device_ids, firmware, strict=True))
+
+    firmware_coordinator = DataUpdateCoordinator(
+        hass,
+        config_entry=entry,
+        logger=_LOGGER,
+        name=f"{DOMAIN}_firmware",
+        update_interval=FIRMWARE_UPDATE_INTERVAL,
+        update_method=async_update_firmware,
+    )
+    await firmware_coordinator.async_config_entry_first_refresh()
+
     async def async_update_devices() -> list[NubiaDeviceState]:
         """Fetch current state for the configured account devices."""
         try:
@@ -170,20 +193,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
         update_method=async_update_devices,
     )
     await coordinator.async_config_entry_first_refresh()
+
     device_states = {
         device_state.id: device_state
         for device_state in coordinator.data
         if device_state.id is not None
     }
-    firmware_by_device_id = dict(
-        zip(
-            device_ids,
-            await asyncio.gather(
-                *(async_get_firmware(device_id) for device_id in device_ids)
-            ),
-            strict=True,
-        )
-    )
     devices: list[NubiaCareDevice] = []
     for device_id, device_info in device_infos.items():
         device_state = device_states.get(device_id)
@@ -194,7 +209,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
                 model_name=(
                     device_state.model_name if device_state is not None else None
                 ),
-                firmware=firmware_by_device_id[device_id],
+                firmware=firmware_coordinator.data[device_id],
             )
         )
     entry.runtime_data = NubiaCareRuntimeData(
@@ -202,6 +217,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
         session=session,
         devices=devices,
         coordinator=coordinator,
+        firmware_coordinator=firmware_coordinator,
     )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

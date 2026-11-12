@@ -21,14 +21,14 @@ Care account. The integration checks the credentials and retrieves the account
 devices before completing setup.
 
 On setup or reload, the integration retrieves the account's current device
-list, fetches each device's installed firmware version for Home Assistant's
-device information, and polls current state every ten minutes. Newly
+list and fetches each device's installed firmware version for Home Assistant's
+device information. Device state is polled every ten minutes, while firmware
+availability is checked every twelve hours. Newly
 associated devices are discovered after the integration is reloaded. Devices
 without a reported location remain available but have no map coordinates until
 the service provides a location. Home Assistant's standard GPS attributes are
-numeric floats. Credentials are stored in the config entry;
-authentication tokens are kept in memory and renewed when Home Assistant
-starts.
+numeric floats. Credentials are stored in the config entry; authentication
+tokens are kept in memory and renewed when Home Assistant starts.
 
 ## Actions
 
@@ -36,6 +36,14 @@ Use the **Nubia Care: Refresh location** action in an automation or script
 to ask a watch to report its current location. Select the watch as the device
 target. The integration waits about 10 seconds after the request, then refreshes
 its device data.
+
+## Firmware updates
+
+The integration creates a firmware update entity for each watch. It reports
+the installed and available versions, release notes, and package size, and
+supports requesting installation of the available update. Nubia Care does not
+report whether an update is active or its progress, so Home Assistant cannot
+show installation progress.
 
 ## Removal
 

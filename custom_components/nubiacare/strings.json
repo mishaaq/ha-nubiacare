@@ -23,6 +23,12 @@
     },
     "request_location_failed": {
       "message": "Unable to request a location from Nubia Care: {reason}"
+    },
+    "install_update_failed": {
+      "message": "Unable to request a firmware update from Nubia Care: {reason}"
+    },
+    "firmware_update_unavailable": {
+      "message": "No matching Nubia Care firmware update is available."
     }
   },
   "entity": {
@@ -34,6 +40,11 @@
     "sensor": {
       "battery": {
         "name": "Battery"
+      }
+    },
+    "update": {
+      "firmware": {
+        "name": "Firmware"
       }
     }
   }
