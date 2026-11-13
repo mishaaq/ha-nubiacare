@@ -30,6 +30,12 @@
     },
     "firmware_update_unavailable": {
       "message": "No matching Nubia Care firmware update is available."
+    },
+    "send_message_failed": {
+      "message": "Unable to send a message to Nubia Care: {reason}"
+    },
+    "message_too_long": {
+      "message": "Message must be no more than {max_length} characters; emoji count as two."
     }
   },
   "entity": {
@@ -46,6 +52,11 @@
     "update": {
       "firmware": {
         "name": "Firmware"
+      }
+    },
+    "notify": {
+      "message": {
+        "name": "Message"
       }
     }
   }

@@ -1,11 +1,11 @@
 # Nubia Care for Home Assistant
 
 This custom integration connects to a Nubia Care account and creates a Home
-Assistant device, GPS device tracker, and battery sensor for each watch
-associated with that account. Trackers use the latest location reported by
-Nubia Care and appear on the Home Assistant map when a location is available.
-The battery sensor reports the latest battery percentage provided by Nubia
-Care.
+Assistant device, GPS device tracker, battery sensor, firmware update entity,
+and text notify entity for each watch associated with that account. Trackers
+use the latest location reported by Nubia Care and appear on the Home Assistant
+map when a location is available. The battery sensor reports the latest
+battery percentage provided by Nubia Care.
 
 ## Installation
 
@@ -44,6 +44,13 @@ the installed and available versions, release notes, and package size, and
 supports requesting installation of the available update. Nubia Care does not
 report whether an update is active or its progress, so Home Assistant cannot
 show installation progress.
+
+## Notifications
+
+The integration creates a notify entity for each watch. Use
+`notify.send_message` to send text to a watch; Nubia Care supports message
+content only, not a title. Messages are limited to 64 UTF-16 code units, so
+emoji count as two.
 
 ## Removal
 

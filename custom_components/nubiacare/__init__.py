@@ -46,6 +46,7 @@ _API_ERROR_TRANSLATIONS = {
 
 PLATFORMS: list[Platform] = [
     Platform.DEVICE_TRACKER,
+    Platform.NOTIFY,
     Platform.SENSOR,
     Platform.UPDATE,
 ]

@@ -12,7 +12,7 @@
   "issue_tracker": "https://github.com/mishaaq/ha-nubiacare/issues",
   "quality_scale": "bronze",
   "requirements": [
-    "libnubiacare-py==0.4.0"
+    "libnubiacare-py==0.5.0"
   ],
   "version": "0.4.0"
 }
