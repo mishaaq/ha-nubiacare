@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-import voluptuous as vol
+import probatio
 from homeassistant.config_entries import ConfigFlow as HomeAssistantConfigFlow
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
@@ -24,10 +24,10 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-STEP_USER_DATA_SCHEMA = vol.Schema(
+STEP_USER_DATA_SCHEMA = probatio.Schema(
     {
-        vol.Required(CONF_USERNAME): vol.All(str, vol.Length(min=1)),
-        vol.Required(CONF_PASSWORD): vol.All(str, vol.Length(min=1)),
+        probatio.Required(CONF_USERNAME): probatio.All(str, probatio.Length(min=1)),
+        probatio.Required(CONF_PASSWORD): probatio.All(str, probatio.Length(min=1)),
     }
 )
 
