@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
+from datetime import timedelta
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, override
 
@@ -11,7 +13,6 @@ from homeassistant.components.update import (
     UpdateEntity,
     UpdateEntityFeature,
 )
-from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from nubia_care import NubiaError, NubiaFirmware
 
@@ -22,13 +23,13 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.device_registry import DeviceInfo
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
-    from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
     from nubia_care import NubiaAPI, NubiaSession
 
     from . import NubiaCareConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 _RELEASE_SUMMARY_MAX_LENGTH = 255
+SCAN_INTERVAL = timedelta(hours=12)
 
 
 async def async_setup_entry(
@@ -39,14 +40,16 @@ async def async_setup_entry(
     """Set up a firmware update entity for every configured device."""
     runtime_data = entry.runtime_data
     async_add_entities(
-        NubiaCareUpdateEntity(
-            runtime_data.firmware_coordinator,
-            runtime_data.api,
-            runtime_data.session,
-            device,
-            device.device_id,
-        )
-        for device in runtime_data.devices
+        [
+            NubiaCareUpdateEntity(
+                runtime_data.api,
+                runtime_data.session,
+                device,
+                device.device_id,
+            )
+            for device in runtime_data.devices
+        ],
+        update_before_add=True,
     )
 
 
@@ -63,7 +66,6 @@ class NubiaCareUpdateEntity(UpdateEntity):
 
     def __init__(
         self,
-        coordinator: DataUpdateCoordinator[dict[str, NubiaFirmware | None]],
         api: NubiaAPI,
         session: NubiaSession,
         device: NubiaCareDevice,
@@ -71,30 +73,29 @@ class NubiaCareUpdateEntity(UpdateEntity):
     ) -> None:
         """Initialize the firmware update entity."""
         super().__init__()
-        self.coordinator = coordinator
         self._api = api
         self._session = session
         self._initial_device = device
         self._device_id = device_id
         self._attr_unique_id = f"{device_id}_firmware"
-        self._attr_available = coordinator.last_update_success
         self._firmware: NubiaFirmware | None = None
         self._update_firmware()
 
-    @override
-    async def async_added_to_hass(self) -> None:
-        """Subscribe to firmware coordinator updates."""
-        await super().async_added_to_hass()
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self._handle_coordinator_update)
-        )
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Refresh firmware details when the firmware coordinator updates."""
-        self._attr_available = self.coordinator.last_update_success
+    async def async_update(self) -> None:
+        """Fetch the latest firmware details for this device."""
+        try:
+            self._firmware = await self._api.async_get_device_firmware(
+                self._session, self._device_id
+            )
+        except NubiaError as err:
+            _LOGGER.warning(
+                "Unable to fetch Nubia Care firmware version for device %s: %s",
+                self._device_id,
+                err,
+            )
+            self._firmware = None
+        self._attr_available = True
         self._update_firmware()
-        self.async_write_ha_state()
 
     @override
     async def async_install(
@@ -124,7 +125,8 @@ class NubiaCareUpdateEntity(UpdateEntity):
                 translation_key="install_update_failed",
                 translation_placeholders={"reason": str(err)},
             ) from err
-        await self.coordinator.async_request_refresh()
+        await self.async_update()
+        self.async_write_ha_state()
 
     async def async_release_notes(self) -> str | None:
         """Return the full release notes for the available firmware."""
@@ -135,11 +137,12 @@ class NubiaCareUpdateEntity(UpdateEntity):
     @cached_property
     def device_info(self) -> DeviceInfo:
         """Associate this update entity with its Nubia Care device."""
-        return create_device_info(self._device_id, self._initial_device)
+        return create_device_info(
+            self._device_id, replace(self._initial_device, firmware=self._firmware)
+        )
 
     def _update_firmware(self) -> None:
-        """Update cached entity values from the coordinator."""
-        self._firmware = self.coordinator.data.get(self._device_id)
+        """Update cached entity values from the latest API response."""
         firmware = self._firmware
         installed_version = (
             _non_empty(firmware.device_firmware) if firmware is not None else None
