@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import probatio
@@ -20,17 +19,16 @@ from homeassistant.exceptions import (
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import service
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from nubia_care import (
     NubiaAPI,
     NubiaAuth,
     NubiaAuthenticationError,
-    NubiaDeviceState,
     NubiaError,
     NubiaSession,
 )
 
 from .const import DOMAIN
+from .coordinator import NubiaCareCoordinator
 from .entity import NubiaCareDevice
 
 if TYPE_CHECKING:
@@ -49,7 +47,6 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.UPDATE,
 ]
-UPDATE_INTERVAL = timedelta(minutes=10)
 LOCATION_REQUEST_DELAY = 10
 
 
@@ -60,7 +57,7 @@ class NubiaCareRuntimeData:
     api: NubiaAPI
     session: NubiaSession
     devices: list[NubiaCareDevice]
-    coordinator: DataUpdateCoordinator[list[NubiaDeviceState]]
+    coordinators: dict[str, NubiaCareCoordinator]
 
 
 type NubiaCareConfigEntry = ConfigEntry[NubiaCareRuntimeData]
@@ -90,7 +87,13 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
                 translation_key="device_not_supported",
             )
 
-        runtime_data = entry.runtime_data
+        runtime_data: NubiaCareRuntimeData = entry.runtime_data
+        coordinator = runtime_data.coordinators.get(device_id)
+        if coordinator is None:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="device_not_supported",
+            )
         try:
             await runtime_data.api.async_request_last_location(
                 runtime_data.session, device_id
@@ -104,7 +107,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
                 translation_placeholders={"reason": reason},
             ) from err
         await asyncio.sleep(LOCATION_REQUEST_DELAY)
-        await runtime_data.coordinator.async_request_refresh()
+        await coordinator.async_request_refresh()
 
     hass.services.async_register(
         DOMAIN,
@@ -143,48 +146,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
     }
     device_ids = list(device_infos)
 
-    async def async_update_devices() -> list[NubiaDeviceState]:
-        """Fetch current state for the configured account devices."""
-        try:
-            return await asyncio.gather(
-                *(api.async_get_device(session, device_id) for device_id in device_ids)
-            )
-        except NubiaError as err:
-            message = f"Unable to fetch Nubia Care device details: {err}"
-            raise UpdateFailed(message) from err
-
-    coordinator = DataUpdateCoordinator(
-        hass,
-        config_entry=entry,
-        logger=_LOGGER,
-        name=DOMAIN,
-        update_interval=UPDATE_INTERVAL,
-        update_method=async_update_devices,
-    )
-    await coordinator.async_config_entry_first_refresh()
-
-    device_states = {
-        device_state.id: device_state
-        for device_state in coordinator.data
-        if device_state.id is not None
+    coordinators = {
+        device_id: NubiaCareCoordinator(hass, entry, api, session, device_id)
+        for device_id in device_ids
     }
+    await asyncio.gather(
+        *(
+            coordinator.async_config_entry_first_refresh()
+            for coordinator in coordinators.values()
+        )
+    )
+
     devices: list[NubiaCareDevice] = []
     for device_id, device_info in device_infos.items():
-        device_state = device_states.get(device_id)
+        device_state = coordinators[device_id].data
         devices.append(
             NubiaCareDevice(
                 device_id=device_id,
                 device_info=device_info,
-                model_name=(
-                    device_state.model_name if device_state is not None else None
-                ),
+                model_name=device_state.model_name,
             )
         )
     entry.runtime_data = NubiaCareRuntimeData(
         api=api,
         session=session,
         devices=devices,
-        coordinator=coordinator,
+        coordinators=coordinators,
     )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

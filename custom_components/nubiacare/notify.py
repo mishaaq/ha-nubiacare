@@ -36,7 +36,6 @@ async def async_setup_entry(
             runtime_data.api,
             runtime_data.session,
             device,
-            device.device_id,
         )
         for device in runtime_data.devices
     )
@@ -53,15 +52,14 @@ class NubiaCareNotifier(NotifyEntity):
         api: NubiaAPI,
         session: NubiaSession,
         device: NubiaCareDevice,
-        device_id: str,
     ) -> None:
         """Initialize the notifier."""
         super().__init__()
         self._api = api
         self._session = session
         self._initial_device = device
-        self._device_id = device_id
-        self._attr_unique_id = f"{device_id}_notify"
+        self._device_id = device.device_id
+        self._attr_unique_id = f"{device.device_id}_notify"
 
     @override
     async def async_send_message(self, message: str, title: str | None = None) -> None:
@@ -91,4 +89,4 @@ class NubiaCareNotifier(NotifyEntity):
     @override
     def device_info(self) -> DeviceInfo:
         """Associate this notifier with its Nubia Care HA device."""
-        return create_device_info(self._device_id, self._initial_device)
+        return create_device_info(self._initial_device)

@@ -27,7 +27,7 @@ class NubiaCareDevice:
     firmware: NubiaFirmware | None = None
 
 
-def create_device_info(device_id: str, device: NubiaCareDevice) -> DeviceInfo:
+def create_device_info(device: NubiaCareDevice) -> DeviceInfo:
     """Create device registry information from Nubia device details."""
     device_info = device.device_info
     model_name = device.model_name
@@ -42,7 +42,7 @@ def create_device_info(device_id: str, device: NubiaCareDevice) -> DeviceInfo:
                 break
 
     return DeviceInfo(
-        identifiers={(DOMAIN, device_id)},
+        identifiers={(DOMAIN, device.device_id)},
         manufacturer=manufacturer,
         model=model,
         name=device_info.name or device_info.id,

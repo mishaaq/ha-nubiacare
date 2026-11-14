@@ -45,7 +45,6 @@ async def async_setup_entry(
                 runtime_data.api,
                 runtime_data.session,
                 device,
-                device.device_id,
             )
             for device in runtime_data.devices
         ],
@@ -69,15 +68,14 @@ class NubiaCareUpdateEntity(UpdateEntity):
         api: NubiaAPI,
         session: NubiaSession,
         device: NubiaCareDevice,
-        device_id: str,
     ) -> None:
         """Initialize the firmware update entity."""
         super().__init__()
         self._api = api
         self._session = session
         self._initial_device = device
-        self._device_id = device_id
-        self._attr_unique_id = f"{device_id}_firmware"
+        self._device_id = device.device_id
+        self._attr_unique_id = f"{device.device_id}_firmware"
         self._firmware: NubiaFirmware | None = None
         self._update_firmware()
 
@@ -138,7 +136,7 @@ class NubiaCareUpdateEntity(UpdateEntity):
     def device_info(self) -> DeviceInfo:
         """Associate this update entity with its Nubia Care device."""
         return create_device_info(
-            self._device_id, replace(self._initial_device, firmware=self._firmware)
+            replace(self._initial_device, firmware=self._firmware)
         )
 
     def _update_firmware(self) -> None:
