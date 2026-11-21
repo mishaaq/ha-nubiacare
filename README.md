@@ -1,6 +1,6 @@
 # Nubia Care for Home Assistant
 
-This custom integration connects to a Nubia Care account and creates a Home Assistant device, GPS device tracker, battery sensor, firmware update entity, and text notify entity for each device associated with that account. Trackers use the latest location reported by Nubia Care and appear on the Home Assistant map when a location is available. The battery sensor reports the latest battery percentage provided by Nubia Care.
+This custom integration connects to a Nubia Care account and creates a Home Assistant device, GPS device tracker, battery sensor, focus-mode calendar, firmware update entity, and text notify entity for each device associated with that account. Trackers use the latest location reported by Nubia Care and appear on the Home Assistant map when a location is available. The battery sensor reports the latest battery percentage provided by Nubia Care.
 
 Devices verified to be supported:
 • ZTE Kids Watch K1 Pro
@@ -14,7 +14,7 @@ Install this integration with Marketplace as a custom repository, or copy the `c
 
 In Home Assistant, go to **Settings → Devices & services → Add integration**, search for **Nubia Care**, and enter the username and password for your Nubia Care account. The integration checks the credentials and retrieves the account devices before completing setup.
 
-On setup or reload, the integration retrieves the account's current device list and fetches each device's installed firmware version for Home Assistant's device information. Device state is polled every ten minutes, while firmware availability is checked every twelve hours. Newly associated devices are discovered after the integration is reloaded. Devices without a reported location remain available but have no map coordinates until the service provides a location.
+On setup or reload, the integration retrieves the account's current device list and fetches each device's installed firmware version for Home Assistant's device information. Device state is polled every ten minutes, focus-mode settings every five minutes, and firmware availability every twelve hours. Enabled focus rules and time intervals are shown as weekly calendar events; disabled rules and intervals are omitted. Newly associated devices are discovered after the integration is reloaded. Devices without a reported location remain available but have no map coordinates until the service provides a location.
 
 ## Actions
 

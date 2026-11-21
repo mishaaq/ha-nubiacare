@@ -1,5 +1,10 @@
 # https://www.home-assistant.io/integrations/default_config/
-default_config:
+#default_config:
+
+history:
+homeassistant_alerts:
+logbook:
+
 
 # https://www.home-assistant.io/integrations/homeassistant/
 homeassistant:

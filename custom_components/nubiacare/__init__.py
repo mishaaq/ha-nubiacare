@@ -28,7 +28,7 @@ from nubia_care import (
 )
 
 from .const import DOMAIN
-from .coordinator import NubiaCareCoordinator
+from .coordinator import NubiaCareConfigurationCoordinator, NubiaCareCoordinator
 from .entity import NubiaCareDevice
 
 if TYPE_CHECKING:
@@ -42,6 +42,7 @@ _API_ERROR_TRANSLATIONS = {
 }
 
 PLATFORMS: list[Platform] = [
+    Platform.CALENDAR,
     Platform.DEVICE_TRACKER,
     Platform.NOTIFY,
     Platform.SENSOR,
@@ -58,6 +59,7 @@ class NubiaCareRuntimeData:
     session: NubiaSession
     devices: list[NubiaCareDevice]
     coordinators: dict[str, NubiaCareCoordinator]
+    configuration_coordinators: dict[str, NubiaCareConfigurationCoordinator]
 
 
 type NubiaCareConfigEntry = ConfigEntry[NubiaCareRuntimeData]
@@ -150,10 +152,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
         device_id: NubiaCareCoordinator(hass, entry, api, session, device_id)
         for device_id in device_ids
     }
+    configuration_coordinators = {
+        device_id: NubiaCareConfigurationCoordinator(
+            hass, entry, api, session, device_id
+        )
+        for device_id in device_ids
+    }
     await asyncio.gather(
         *(
             coordinator.async_config_entry_first_refresh()
-            for coordinator in coordinators.values()
+            for coordinator in (
+                *coordinators.values(),
+                *configuration_coordinators.values(),
+            )
         )
     )
 
@@ -172,6 +183,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NubiaCareConfigEntry) ->
         session=session,
         devices=devices,
         coordinators=coordinators,
+        configuration_coordinators=configuration_coordinators,
     )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

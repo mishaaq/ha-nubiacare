@@ -7,7 +7,13 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, override
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from nubia_care import NubiaAPI, NubiaDeviceState, NubiaError, NubiaSession
+from nubia_care import (
+    NubiaAPI,
+    NubiaDeviceConfiguration,
+    NubiaDeviceState,
+    NubiaError,
+    NubiaSession,
+)
 
 from .const import DOMAIN
 
@@ -18,6 +24,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 UPDATE_INTERVAL = timedelta(minutes=10)
+CONFIGURATION_UPDATE_INTERVAL = timedelta(minutes=5)
 
 
 class NubiaCareCoordinator(DataUpdateCoordinator[NubiaDeviceState]):
@@ -63,4 +70,47 @@ class NubiaCareCoordinator(DataUpdateCoordinator[NubiaDeviceState]):
                 f"Nubia Care returned state for unexpected device {device_state.id!r}"
             )
             raise UpdateFailed(message)
+
         return device_state
+
+
+class NubiaCareConfigurationCoordinator(
+    DataUpdateCoordinator[NubiaDeviceConfiguration]
+):
+    """Fetch current configuration for one Nubia Care device."""
+
+    config_entry: NubiaCareConfigEntry
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        config_entry: NubiaCareConfigEntry,
+        api: NubiaAPI,
+        session: NubiaSession,
+        device_id: str,
+    ) -> None:
+        """Initialize the configuration coordinator."""
+        super().__init__(
+            hass,
+            _LOGGER,
+            config_entry=config_entry,
+            name=f"{DOMAIN} configuration",
+            update_interval=CONFIGURATION_UPDATE_INTERVAL,
+        )
+        self._api = api
+        self._session = session
+        self._device_id = device_id
+
+    @override
+    async def _async_update_data(self) -> NubiaDeviceConfiguration:
+        """Fetch current configuration for this device."""
+        try:
+            return await self._api.async_get_device_configuration(
+                self._session, self._device_id
+            )
+        except NubiaError as err:
+            message = (
+                f"Unable to fetch Nubia Care device configuration for "
+                f"{self._device_id}: {err}"
+            )
+            raise UpdateFailed(message) from err

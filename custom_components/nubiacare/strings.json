@@ -38,6 +38,11 @@
     }
   },
   "entity": {
+    "calendar": {
+      "focus_mode": {
+        "name": "Focus mode"
+      }
+    },
     "device_tracker": {
       "location": {
         "name": "Location"
